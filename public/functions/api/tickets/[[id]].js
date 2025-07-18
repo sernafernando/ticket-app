@@ -3,6 +3,7 @@
 //
 // Cloudflare Pages Functions enrutará:
 // - POST /api/tickets a esta función con `id` como undefined.
+// - GET /api/tickets a esta función con `id` como undefined (para listar todos).
 // - GET, PUT /api/tickets/{id} a esta función con `id` como el ID del ticket.
 
 // Importa los tipos de Request y Env para mejor tipado (opcional, pero buena práctica)
@@ -71,7 +72,39 @@ export async function onRequest(context) {
         }
     }
 
+    // --- NUEVO: Manejo de solicitudes GET para obtener TODOS los tickets ---
+    // Esto se activará cuando la ruta sea exactamente /api/tickets y el método sea GET
+    if (method === 'GET' && url.pathname === '/api/tickets') {
+        try {
+            const { keys } = await TICKETS.list(); // Obtiene solo las claves de KV
+
+            const allTickets = [];
+            for (const keyInfo of keys) {
+                const ticketId = keyInfo.name;
+                const ticketData = await TICKETS.get(ticketId);
+                if (ticketData) {
+                    allTickets.push(JSON.parse(ticketData));
+                }
+            }
+            // Ordenar tickets por fecha de creación (más recientes primero)
+            allTickets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+            return new Response(JSON.stringify(allTickets), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) {
+            console.error('Error al listar tickets:', e);
+            return new Response(JSON.stringify({ error: 'Error interno del servidor al listar tickets.' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+
+
     // --- Manejo de solicitudes GET para obtener un ticket por ID ---
+    // Esto se activará cuando la ruta sea /api/tickets/{id} y el método sea GET
     if (method === 'GET' && ticketIdFromPath) {
         try {
             const ticket = await TICKETS.get(ticketIdFromPath);

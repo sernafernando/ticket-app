@@ -84,11 +84,23 @@
             </div>
         </section>
 
+        <!-- NUEVA SECCIÓN: Listar Todos los Tickets (Para Agentes) -->
+        <section class="mb-10 p-6 bg-gray-700 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-yellow-300 mb-6">Listar Todos los Tickets</h2>
+            <button id="listAllTicketsButton"
+                    class="w-full bg-yellow-600 text-white py-3 px-4 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-200 ease-in-out">
+                Mostrar Todos los Tickets
+            </button>
+            <div id="allTicketsList" class="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-600 hidden">
+                <!-- La lista de tickets se cargará aquí -->
+            </div>
+        </section>
+
         <!-- Sección para Gestión de Tickets (Agente) -->
         <section class="p-6 bg-gray-700 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold text-purple-300 mb-6">Gestión de Tickets (Modo Agente)</h2>
             <p class="text-gray-300 mb-4">
-                Para gestionar un ticket, primero consúltalo usando el campo de "Consultar Estado de Ticket" de arriba.
+                Para gestionar un ticket, primero consúltalo usando el campo de "Consultar Estado de Ticket" de arriba, o seleccionándolo de la lista "Todos los Tickets".
                 Una vez cargado, aparecerán las opciones de actualización aquí.
             </p>
             <div id="agentControls" class="hidden">
@@ -132,6 +144,11 @@
         const addCommentTextarea = document.getElementById('addComment');
         const updateTicketButton = document.getElementById('updateTicketButton');
 
+        // NUEVOS ELEMENTOS DEL DOM
+        const listAllTicketsButton = document.getElementById('listAllTicketsButton');
+        const allTicketsListDiv = document.getElementById('allTicketsList');
+
+
         let currentTicketId = null; // Almacena el ID del ticket actualmente visualizado/gestionado
 
         // Función para mostrar mensajes personalizados (sin alert())
@@ -167,6 +184,7 @@
                 ticketIdInput.value = newTicket.id; // Precarga el ID en el campo de consulta
                 displayTicketDetails(newTicket); // Muestra los detalles del nuevo ticket
                 createTicketForm.reset(); // Limpia el formulario
+                await listAllTickets(); // Refresca la lista de todos los tickets
             } catch (error) {
                 console.error('Error al crear ticket:', error);
                 showMessage(error.message, 'error');
@@ -199,6 +217,67 @@
                 agentControlsDiv.classList.add('hidden'); // Oculta controles de agente
             }
         });
+
+        // --- NUEVO: Event Listener para Listar Todos los Tickets ---
+        listAllTicketsButton.addEventListener('click', async () => {
+            await listAllTickets();
+        });
+
+        // --- NUEVA FUNCIÓN: Listar y Mostrar Todos los Tickets ---
+        async function listAllTickets() {
+            try {
+                const response = await fetch(API_BASE_URL); // Llama al endpoint sin ID
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al listar todos los tickets.');
+                }
+                const allTickets = await response.json();
+
+                allTicketsListDiv.classList.remove('hidden'); // Muestra el contenedor de la lista
+
+                if (allTickets.length === 0) {
+                    allTicketsListDiv.innerHTML = '<p class="text-gray-400">No hay tickets creados aún.</p>';
+                    return;
+                }
+
+                let ticketsHtml = '<ul class="space-y-3">';
+                allTickets.forEach(ticket => {
+                    ticketsHtml += `
+                        <li class="bg-gray-700 p-3 rounded-lg border border-gray-600 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <div>
+                                <span class="font-semibold text-gray-100">${ticket.subject}</span>
+                                <span class="text-gray-400 text-sm ml-2">(ID: ${ticket.id})</span>
+                                <p class="text-gray-300 text-sm">Estado: <span class="font-bold text-blue-400">${ticket.status}</span></p>
+                                <p class="text-gray-500 text-xs">Creado: ${new Date(ticket.createdAt).toLocaleString()}</p>
+                            </div>
+                            <button data-ticket-id="${ticket.id}"
+                                    class="view-ticket-btn mt-2 sm:mt-0 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-700 transition duration-200 ease-in-out">
+                                Ver Detalles
+                            </button>
+                        </li>
+                    `;
+                });
+                ticketsHtml += '</ul>';
+                allTicketsListDiv.innerHTML = ticketsHtml;
+
+                // Añadir event listeners a los botones "Ver Detalles"
+                document.querySelectorAll('.view-ticket-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const ticketId = event.target.dataset.ticketId;
+                        ticketIdInput.value = ticketId; // Rellena el campo de consulta
+                        checkStatusButton.click(); // Simula un clic en el botón de consulta
+                        allTicketsListDiv.classList.add('hidden'); // Oculta la lista al ver un detalle
+                    });
+                });
+
+                showMessage('Tickets listados exitosamente.', 'success');
+            } catch (error) {
+                console.error('Error al listar tickets:', error);
+                showMessage(error.message, 'error');
+                allTicketsListDiv.classList.add('hidden'); // Oculta la lista si hay error
+            }
+        }
+
 
         // --- Función para Mostrar Detalles del Ticket ---
         function displayTicketDetails(ticket) {
@@ -276,12 +355,15 @@
                 const updatedTicket = await response.json();
                 showMessage('Ticket actualizado exitosamente.', 'success');
                 displayTicketDetails(updatedTicket); // Vuelve a cargar los detalles actualizados
+                await listAllTickets(); // Refresca la lista de todos los tickets
             } catch (error) {
                 console.error('Error al actualizar ticket:', error);
                 showMessage(error.message, 'error');
             }
         });
 
+        // Cargar la lista de tickets al cargar la página por primera vez
+        // listAllTickets(); // Puedes descomentar esto si quieres que la lista se cargue automáticamente al inicio
     </script>
 </body>
 </html>
