@@ -1,0 +1,20 @@
+{
+  "name": "ticket-app",
+  "version": "1.0.0",
+  "description": "Sistema de gestión de tickets con Cloudflare Pages y Workers.",
+  "main": "public/functions/api/tickets/[[id]].js",
+  "scripts": {
+    "start": "npx wrangler pages dev public",
+    "deploy": "npx wrangler pages deploy public"
+  },
+  "keywords": [
+    "cloudflare",
+    "pages",
+    "workers",
+    "serverless",
+    "tickets",
+    "kv"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
