@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Tickets</title>
+    <!-- Carga de Tailwind CSS para estilos rápidos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuentes personalizadas */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fondo oscuro principal (gris muy oscuro) */
+            color: #e2e8f0; /* Color de texto claro por defecto */
+        }
+        /* Estilos para el mensaje personalizado */
+        .message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #2f855a; /* Verde oscuro para éxito */
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: none; /* Oculto por defecto */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .message-box.error {
+            background-color: #c53030; /* Rojo oscuro para error */
+        }
+        .message-box.show {
+            display: block;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8 lg:p-10">
+
+    <!-- Contenedor principal centrado y estilizado -->
+    <div class="max-w-4xl mx-auto bg-gray-800 p-6 md:p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-gray-100 mb-8">Sistema de Gestión de Tickets</h1>
+
+        <!-- Sección de Mensajes Personalizados -->
+        <div id="messageBox" class="message-box"></div>
+
+        <!-- Sección para Crear un Nuevo Ticket -->
+        <section class="mb-10 p-6 bg-gray-700 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-blue-300 mb-6">Crear Nuevo Ticket</h2>
+            <form id="createTicketForm" class="space-y-4">
+                <div>
+                    <label for="subject" class="block text-gray-200 font-medium mb-1">Asunto del Ticket:</label>
+                    <input type="text" id="subject" name="subject" required
+                           class="w-full p-3 border border-gray-600 rounded-md bg-gray-900 text-white focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="description" class="block text-gray-200 font-medium mb-1">Descripción Detallada:</label>
+                    <textarea id="description" name="description" rows="5" required
+                              class="w-full p-3 border border-gray-600 rounded-md bg-gray-900 text-white focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                <button type="submit"
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-200 ease-in-out">
+                    Enviar Ticket
+                </button>
+            </form>
+        </section>
+
+        <!-- Sección para Ver el Estado de un Ticket (Usuario) -->
+        <section class="mb-10 p-6 bg-gray-700 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-green-300 mb-6">Consultar Estado de Ticket</h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <input type="text" id="ticketIdInput" placeholder="Ingresa el ID de tu Ticket"
+                       class="flex-grow p-3 border border-gray-600 rounded-md bg-gray-900 text-white focus:ring-green-500 focus:border-green-500">
+                <button id="checkStatusButton"
+                        class="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-200 ease-in-out">
+                    Ver Estado
+                </button>
+            </div>
+            <div id="ticketDetails" class="bg-gray-800 p-4 rounded-lg border border-gray-600 hidden">
+                <!-- Los detalles del ticket se cargarán aquí -->
+            </div>
+        </section>
+
+        <!-- Sección para Gestión de Tickets (Agente) -->
+        <section class="p-6 bg-gray-700 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-purple-300 mb-6">Gestión de Tickets (Modo Agente)</h2>
+            <p class="text-gray-300 mb-4">
+                Para gestionar un ticket, primero consúltalo usando el campo de "Consultar Estado de Ticket" de arriba.
+                Una vez cargado, aparecerán las opciones de actualización aquí.
+            </p>
+            <div id="agentControls" class="hidden">
+                <div class="mb-4">
+                    <label for="updateStatus" class="block text-gray-200 font-medium mb-1">Cambiar Estado:</label>
+                    <select id="updateStatus"
+                            class="w-full p-3 border border-gray-600 rounded-md bg-gray-900 text-white focus:ring-purple-500 focus:border-purple-500">
+                        <option value="Abierto">Abierto</option>
+                        <option value="En Progreso">En Progreso</option>
+                        <option value="Resuelto">Resuelto</option>
+                        <option value="Cerrado">Cerrado</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="addComment" class="block text-gray-200 font-medium mb-1">Añadir Comentario:</label>
+                    <textarea id="addComment" placeholder="Escribe tu comentario aquí..." rows="3"
+                              class="w-full p-3 border border-gray-600 rounded-md bg-gray-900 text-white focus:ring-purple-500 focus:border-purple-500"></textarea>
+                </div>
+                <button id="updateTicketButton"
+                        class="w-full bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-200 ease-in-out">
+                    Actualizar Ticket
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // URL base de la API. Cloudflare Pages Functions se sirven desde /api por defecto.
+        const API_BASE_URL = '/api/tickets';
+
+        // Elementos del DOM
+        const createTicketForm = document.getElementById('createTicketForm');
+        const subjectInput = document.getElementById('subject');
+        const descriptionInput = document.getElementById('description');
+        const ticketIdInput = document.getElementById('ticketIdInput');
+        const checkStatusButton = document.getElementById('checkStatusButton');
+        const ticketDetailsDiv = document.getElementById('ticketDetails');
+        const messageBox = document.getElementById('messageBox');
+        const agentControlsDiv = document.getElementById('agentControls');
+        const updateStatusSelect = document.getElementById('updateStatus');
+        const addCommentTextarea = document.getElementById('addComment');
+        const updateTicketButton = document.getElementById('updateTicketButton');
+
+        let currentTicketId = null; // Almacena el ID del ticket actualmente visualizado/gestionado
+
+        // Función para mostrar mensajes personalizados (sin alert())
+        function showMessage(message, type = 'success') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box show ${type}`;
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000); // El mensaje desaparece después de 3 segundos
+        }
+
+        // --- Event Listener para Crear Ticket ---
+        createTicketForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Previene el envío por defecto del formulario
+
+            const subject = subjectInput.value;
+            const description = descriptionInput.value;
+
+            try {
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject, description })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al crear el ticket.');
+                }
+
+                const newTicket = await response.json();
+                showMessage(`Ticket creado exitosamente. ID: ${newTicket.id}`, 'success');
+                ticketIdInput.value = newTicket.id; // Precarga el ID en el campo de consulta
+                displayTicketDetails(newTicket); // Muestra los detalles del nuevo ticket
+                createTicketForm.reset(); // Limpia el formulario
+            } catch (error) {
+                console.error('Error al crear ticket:', error);
+                showMessage(error.message, 'error');
+            }
+        });
+
+        // --- Event Listener para Consultar Estado de Ticket ---
+        checkStatusButton.addEventListener('click', async () => {
+            const ticketId = ticketIdInput.value.trim();
+            if (!ticketId) {
+                showMessage('Por favor, ingresa un ID de ticket.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${ticketId}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Ticket no encontrado o error al consultar.');
+                }
+
+                const ticket = await response.json();
+                displayTicketDetails(ticket);
+                showMessage('Ticket cargado exitosamente.', 'success');
+            } catch (error) {
+                console.error('Error al consultar ticket:', error);
+                showMessage(error.message, 'error');
+                ticketDetailsDiv.classList.add('hidden'); // Oculta los detalles si hay error
+                agentControlsDiv.classList.add('hidden'); // Oculta controles de agente
+            }
+        });
+
+        // --- Función para Mostrar Detalles del Ticket ---
+        function displayTicketDetails(ticket) {
+            currentTicketId = ticket.id; // Guarda el ID del ticket actual
+            ticketDetailsDiv.classList.remove('hidden'); // Muestra el contenedor de detalles
+
+            let commentsHtml = '';
+            if (ticket.comments && ticket.comments.length > 0) {
+                commentsHtml = ticket.comments.map(comment => `
+                    <li class="mb-2 p-2 bg-gray-900 rounded-md border border-gray-700">
+                        <strong class="text-gray-200">${comment.author}</strong>
+                        <span class="text-gray-400 text-sm ml-2">(${new Date(comment.timestamp).toLocaleString()})</span>:
+                        <p class="text-gray-300 mt-1">${comment.text}</p>
+                    </li>
+                `).join('');
+            } else {
+                commentsHtml = '<li class="text-gray-400">No hay comentarios aún.</li>';
+            }
+
+            ticketDetailsDiv.innerHTML = `
+                <h3 class="text-xl font-semibold text-gray-100 mb-2">Ticket: ${ticket.subject}</h3>
+                <p class="text-gray-200 mb-1"><strong>ID:</strong> <code class="bg-gray-900 p-1 rounded text-sm">${ticket.id}</code></p>
+                <p class="text-gray-200 mb-1"><strong>Estado:</strong> <span class="font-bold text-blue-400">${ticket.status}</span></p>
+                <p class="text-gray-200 mb-4"><strong>Descripción:</strong> ${ticket.description}</p>
+                <h4 class="text-lg font-semibold text-gray-100 mb-2">Comentarios:</h4>
+                <ul class="list-disc pl-5 space-y-2 bg-gray-800 p-4 rounded-md border border-gray-600">
+                    ${commentsHtml}
+                </ul>
+            `;
+
+            // Actualiza los controles del agente con el estado actual del ticket
+            updateStatusSelect.value = ticket.status;
+            addCommentTextarea.value = ''; // Limpia el campo de comentario
+            agentControlsDiv.classList.remove('hidden'); // Muestra los controles del agente
+        }
+
+        // --- Event Listener para Actualizar Ticket (Agente) ---
+        updateTicketButton.addEventListener('click', async () => {
+            if (!currentTicketId) {
+                showMessage('Primero selecciona un ticket para actualizar.', 'error');
+                return;
+            }
+
+            const newStatus = updateStatusSelect.value;
+            const newComment = addCommentTextarea.value.trim();
+            const updatePayload = {};
+
+            // Solo agrega al payload si hay un cambio de estado o un nuevo comentario
+            if (newStatus && newStatus !== updateStatusSelect.dataset.originalStatus) {
+                updatePayload.status = newStatus;
+            }
+            if (newComment) {
+                updatePayload.comment = newComment;
+                // Puedes añadir un campo para el autor del comentario aquí si implementas login
+                updatePayload.author = 'Agente'; // Por defecto 'Agente'
+            }
+
+            if (Object.keys(updatePayload).length === 0) {
+                showMessage('No hay cambios para guardar.', 'info');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${currentTicketId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatePayload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al actualizar el ticket.');
+                }
+
+                const updatedTicket = await response.json();
+                showMessage('Ticket actualizado exitosamente.', 'success');
+                displayTicketDetails(updatedTicket); // Vuelve a cargar los detalles actualizados
+            } catch (error) {
+                console.error('Error al actualizar ticket:', error);
+                showMessage(error.message, 'error');
+            }
+        });
+
+    </script>
+</body>
+</html>
